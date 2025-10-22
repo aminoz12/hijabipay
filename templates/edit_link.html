@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md mx-auto">
+        <div class="text-center mb-8">
+            <h1 class="text-2xl font-bold text-gray-900">Modifier le lien de paiement</h1>
+        </div>
+        
+        <div class="bg-white py-8 px-6 shadow rounded-lg sm:px-10">
+            <form method="POST" action="{{ url_for('edit_payment_link', unique_id=link.unique_id) }}" class="space-y-6">
+                <div>
+                    <label for="product_name" class="block text-sm font-medium text-gray-700">Nom du produit</label>
+                    <input type="text" name="product_name" id="product_name" required 
+                           value="{{ link.product_name }}"
+                           class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                
+                <div>
+                    <label for="client_name" class="block text-sm font-medium text-gray-700">Nom du client (interne)</label>
+                    <input type="text" name="client_name" id="client_name" required
+                           value="{{ link.client_name }}"
+                           class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                
+                <div>
+                    <label for="price" class="block text-sm font-medium text-gray-700">Prix (EUR)</label>
+                    <div class="mt-1 relative rounded-md shadow-sm">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span class="text-gray-500 sm:text-sm">EUR</span>
+                        </div>
+                        <input type="number" name="price" id="price" step="0.01" min="0" required 
+                               value="{{ '%.2f'|format(link.price) }}"
+                               class="focus:ring-blue-500 focus:border-blue-500 block w-full pl-14 pr-12 sm:text-sm border-gray-300 rounded-md">
+                    </div>
+                </div>
+                
+                <div>
+                    <label for="delivery_method" class="block text-sm font-medium text-gray-700">Méthode de livraison</label>
+                    <select id="delivery_method" name="delivery_method" required
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                        <option value="Mondial Relais" {% if link.delivery_method == 'Mondial Relais' %}selected{% endif %}>Mondial Relais</option>
+                        <option value="Colissimo" {% if link.delivery_method == 'Colissimo' %}selected{% endif %}>Colissimo</option>
+                        <option value="Retrait en magasin" {% if link.delivery_method == 'Retrait en magasin' %}selected{% endif %}>Retrait en magasin</option>
+                    </select>
+                </div>
+                
+                <div class="flex justify-between pt-4">
+                    <a href="{{ url_for('index') }}" class="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Annuler
+                    </a>
+                    <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Enregistrer les modifications
+                    </button>
+                </div>
+            </form>
+            
+            <div class="mt-6 pt-6 border-t border-gray-200">
+                <form method="POST" action="{{ url_for('delete_payment_link', unique_id=link.unique_id) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce lien de paiement ? Cette action est irréversible.');">
+                    <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                        Supprimer ce lien de paiement
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

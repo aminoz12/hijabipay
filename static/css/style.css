@@ -1,0 +1,78 @@
+/* Custom styles for HijabiPay */
+
+/* Base styles */
+body {
+    @apply bg-gray-50;
+}
+
+/* Logo styles */
+.logo {
+    max-height: 50px;
+    width: auto;
+}
+
+/* Payment method cards */
+.payment-method {
+    @apply border rounded-lg p-4 mb-4 cursor-pointer transition-colors duration-200;
+    border-color: #e2e8f0;
+}
+
+.payment-method:hover {
+    @apply border-blue-500 bg-blue-50;
+}
+
+.payment-method.selected {
+    @apply border-2 border-blue-500 bg-blue-50;
+}
+
+/* Form inputs */
+input[type="text"],
+input[type="number"],
+input[type="email"],
+select,
+textarea {
+    @apply mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm;
+}
+
+/* Buttons */
+.btn-primary {
+    @apply inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500;
+}
+
+.btn-secondary {
+    @apply inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500;
+}
+
+/* Alert messages */
+.alert {
+    @apply p-4 rounded-md mb-6;
+}
+
+.alert-success {
+    @apply bg-green-50 text-green-800;
+}
+
+.alert-error {
+    @apply bg-red-50 text-red-800;
+}
+
+/* Order summary */
+.order-summary {
+    @apply bg-gray-50 p-6 rounded-lg;
+}
+
+.order-summary-item {
+    @apply flex justify-between py-2 border-b border-gray-200 last:border-0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    .logo {
+        max-height: 40px;
+    }
+    
+    .btn-primary,
+    .btn-secondary {
+        @apply w-full justify-center;
+    }
+}

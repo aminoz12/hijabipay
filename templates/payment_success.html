@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bg-white shadow overflow-hidden sm:rounded-lg max-w-2xl mx-auto">
+    <div class="px-4 py-5 sm:p-6 text-center">
+        <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100">
+            <i class="fas fa-check text-green-600 text-2xl"></i>
+        </div>
+        <h2 class="mt-3 text-2xl font-medium text-gray-900">Paiement réussi !</h2>
+        <p class="mt-2 text-sm text-gray-500">Merci pour votre achat.</p>
+        
+        <div class="mt-8 bg-gray-50 p-6 rounded-lg text-left">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Détails de la commande</h3>
+            <div class="space-y-3">
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Numéro de commande</span>
+                    <span class="font-medium">#{{ payment_link.unique_id }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Produit</span>
+                    <span class="font-medium">{{ payment_link.product_name }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Montant payé</span>
+                    <span class="font-medium">{{ "%.2f"|format(payment_link.price) }} EUR</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Méthode de paiement</span>
+                    <span class="font-medium">
+                        {% if payment_link.payment_method == 'paypal' %}
+                            PayPal
+                        {% else %}
+                            Credit/Debit Card
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Méthode de livraison</span>
+                    <span class="font-medium">{{ payment_link.delivery_method }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500">Date</span>
+                    <span class="font-medium">{{ payment_link.created_at.strftime('%d %B %Y à %H:%M') }}</span>
+                </div>
+            </div>
+            
+            <div class="mt-6 pt-6 border-t border-gray-200">
+                <h4 class="text-sm font-medium text-gray-900 mb-2">Et maintenant ?</h4>
+                <p class="text-sm text-gray-600">Vous recevrez sous peu un email de confirmation avec les détails de votre commande et de la livraison.</p>
+            </div>
+        </div>
+        
+        <div class="mt-8 flex justify-center">
+            <a href="{{ url_for('index') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                Retour à l'accueil
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
