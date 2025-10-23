@@ -46,8 +46,11 @@ class PayPalClient:
             
         self.client = PayPalHttpClient(self.environment)
         
-        # Log environment info for debugging
-        print(f"PayPal client initialized in {PAYPAL_ENVIRONMENT} mode")
+        # Log environment info for debugging (avoid in production logs)
+        if PAYPAL_ENVIRONMENT == 'sandbox':
+            print(f"PayPal client initialized in {PAYPAL_ENVIRONMENT} mode")
+        else:
+            app.logger.info(f"PayPal client initialized in live mode")
 
 # Initialize PayPal client
 paypal_client = PayPalClient()
@@ -97,9 +100,13 @@ def cleanup_old_links():
     db.session.commit()
     return len(old_links)
 
-# Test route to verify PayPal configuration
+# Test route to verify PayPal configuration (only for development)
 @app.route('/test-paypal-config')
 def test_paypal_config():
+    # Only allow in development/sandbox mode for security
+    if PAYPAL_ENVIRONMENT != 'sandbox':
+        return jsonify({'error': 'This endpoint is only available in sandbox mode'}), 403
+    
     return jsonify({
         'paypal_client_id': PAYPAL_CLIENT_ID[:10] + '...' if PAYPAL_CLIENT_ID else 'NOT SET',
         'paypal_secret': 'SET' if PAYPAL_SECRET else 'NOT SET',
@@ -176,15 +183,18 @@ def payment_page(unique_id):
 @csrf.exempt
 def create_paypal_order():
     try:
-        print("=== CREATE PAYPAL ORDER REQUEST ===")
-        data = request.json
-        print(f"Request data: {data}")
+        if PAYPAL_ENVIRONMENT == 'sandbox':
+            print("=== CREATE PAYPAL ORDER REQUEST ===")
         
+        data = request.json
         unique_id = data.get('unique_id')
-        print(f"Unique ID: {unique_id}")
         
         payment_link = PaymentLink.query.filter_by(unique_id=unique_id).first_or_404()
-        print(f"Payment link found: {payment_link.product_name}, Amount: {payment_link.total_amount}")
+        
+        if PAYPAL_ENVIRONMENT == 'sandbox':
+            print(f"Request data: {data}")
+            print(f"Unique ID: {unique_id}")
+            print(f"Payment link found: {payment_link.product_name}, Amount: {payment_link.total_amount}")
         
         # Create PayPal order
         request_paypal = OrdersCreateRequest()
@@ -230,37 +240,42 @@ def create_paypal_order():
             }
         }
         
-        print(f"Order data prepared: {order_data}")
-        print("Sending request to PayPal...")
+        if PAYPAL_ENVIRONMENT == 'sandbox':
+            print(f"Order data prepared: {order_data}")
+            print("Sending request to PayPal...")
         
         request_paypal.request_body(order_data)
         response = paypal_client.client.execute(request_paypal)
         
-        print(f"PayPal Response Type: {type(response)}")
-        print(f"PayPal Response Status Code: {response.status_code}")
+        if PAYPAL_ENVIRONMENT == 'sandbox':
+            print(f"PayPal Response Type: {type(response)}")
+            print(f"PayPal Response Status Code: {response.status_code}")
         
         # Get the order ID from the response
         order_id = response.result.id if hasattr(response.result, 'id') else response.result.get('id')
         order_status = response.result.status if hasattr(response.result, 'status') else response.result.get('status', 'CREATED')
         
-        print(f"Order ID: {order_id}")
-        print(f"Order Status: {order_status}")
+        if PAYPAL_ENVIRONMENT == 'sandbox':
+            print(f"Order ID: {order_id}")
+            print(f"Order Status: {order_status}")
         
         result = {
             'orderID': order_id,
             'status': order_status
         }
         
-        print(f"Returning JSON: {result}")
+        if PAYPAL_ENVIRONMENT == 'sandbox':
+            print(f"Returning JSON: {result}")
         
         return jsonify(result)
         
     except Exception as e:
-        print(f"ERROR in create_paypal_order: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        if PAYPAL_ENVIRONMENT == 'sandbox':
+            print(f"ERROR in create_paypal_order: {str(e)}")
+            import traceback
+            traceback.print_exc()
         app.logger.error(f'Error creating PayPal order: {str(e)}')
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Failed to create payment order'}), 500
 
 @app.route('/capture-paypal-order', methods=['POST'])
 @csrf.exempt
@@ -269,6 +284,10 @@ def capture_paypal_order():
         data = request.json
         order_id = data.get('orderID')
         unique_id = data.get('unique_id')
+        
+        if PAYPAL_ENVIRONMENT == 'sandbox':
+            print(f"=== CAPTURING PAYPAL ORDER ===")
+            print(f"Order ID: {order_id}, Unique ID: {unique_id}")
         
         payment_link = PaymentLink.query.filter_by(unique_id=unique_id).first_or_404()
         
@@ -295,8 +314,12 @@ def capture_paypal_order():
             }), 400
             
     except Exception as e:
+        if PAYPAL_ENVIRONMENT == 'sandbox':
+            print(f"ERROR in capture_paypal_order: {str(e)}")
+            import traceback
+            traceback.print_exc()
         app.logger.error(f'Error capturing PayPal order: {str(e)}')
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        return jsonify({'status': 'error', 'message': 'Failed to process payment'}), 500
 
 @app.route('/payment/success/<unique_id>')
 def payment_success(unique_id):
