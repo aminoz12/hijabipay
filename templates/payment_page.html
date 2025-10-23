@@ -204,17 +204,8 @@
 
 {% block scripts %}
 <!-- PayPal SDK -->
-<script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id }}&currency=EUR&intent=capture&commit=true"
-    data-namespace="paypal"
-    data-currency="EUR"
-    data-intent="capture"
-    data-commit="true"
-    data-components="buttons"
-    data-enable-funding="paypal,card"
-    data-disable-funding="venmo"
-    data-locale="fr_FR"
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer">
+<script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id }}&currency=EUR&intent=capture&commit=true&components=buttons,card-fields&enable-funding=paypal,card&disable-funding=venmo&locale=fr_FR"
+    crossorigin="anonymous">
 </script>
 
 <script>
@@ -269,6 +260,10 @@
             // Clear any existing content
             container.innerHTML = '';
             
+            // Check if card-fields component is available
+            const hasCardFields = typeof paypal.CardFields !== 'undefined';
+            console.log('Card fields available:', hasCardFields);
+            
             // Create PayPal button
             paypal.Buttons({
                 // Button styling
@@ -280,6 +275,9 @@
                     height: 45,
                     tagline: false
                 },
+                
+                // Funding sources
+                fundingSource: undefined, // Allow all funding sources
                 
                 // Create order on server
                 createOrder: function(data, actions) {
