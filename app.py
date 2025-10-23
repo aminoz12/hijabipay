@@ -31,29 +31,46 @@ PAYPAL_ENVIRONMENT = os.getenv('PAYPAL_ENVIRONMENT', 'sandbox')
 class PayPalClient:
     def __init__(self):
         if not PAYPAL_CLIENT_ID or not PAYPAL_SECRET:
-            raise ValueError("PayPal credentials are not properly configured in environment variables")
-            
-        if PAYPAL_ENVIRONMENT == 'sandbox':
-            self.environment = SandboxEnvironment(
-                client_id=PAYPAL_CLIENT_ID,
-                client_secret=PAYPAL_SECRET
-            )
-        else:
-            self.environment = LiveEnvironment(
-                client_id=PAYPAL_CLIENT_ID,
-                client_secret=PAYPAL_SECRET
-            )
-            
-        self.client = PayPalHttpClient(self.environment)
+            error_msg = f"PayPal credentials are not properly configured. CLIENT_ID: {'SET' if PAYPAL_CLIENT_ID else 'MISSING'}, SECRET: {'SET' if PAYPAL_SECRET else 'MISSING'}"
+            app.logger.error(error_msg)
+            raise ValueError(error_msg)
         
-        # Log environment info for debugging (avoid in production logs)
-        if PAYPAL_ENVIRONMENT == 'sandbox':
-            print(f"PayPal client initialized in {PAYPAL_ENVIRONMENT} mode")
-        else:
-            app.logger.info(f"PayPal client initialized in live mode")
+        # Validate credentials are not empty strings
+        if len(PAYPAL_CLIENT_ID.strip()) == 0 or len(PAYPAL_SECRET.strip()) == 0:
+            error_msg = "PayPal credentials are empty strings"
+            app.logger.error(error_msg)
+            raise ValueError(error_msg)
+            
+        try:
+            if PAYPAL_ENVIRONMENT == 'sandbox':
+                self.environment = SandboxEnvironment(
+                    client_id=PAYPAL_CLIENT_ID,
+                    client_secret=PAYPAL_SECRET
+                )
+                print(f"PayPal client initialized in {PAYPAL_ENVIRONMENT} mode")
+                print(f"Client ID prefix: {PAYPAL_CLIENT_ID[:10]}...")
+            else:
+                self.environment = LiveEnvironment(
+                    client_id=PAYPAL_CLIENT_ID,
+                    client_secret=PAYPAL_SECRET
+                )
+                app.logger.info(f"PayPal client initialized in live mode")
+                app.logger.info(f"Client ID prefix: {PAYPAL_CLIENT_ID[:10]}...")
+                
+            self.client = PayPalHttpClient(self.environment)
+            
+        except Exception as e:
+            error_msg = f"Failed to initialize PayPal client: {str(e)}"
+            app.logger.error(error_msg)
+            raise ValueError(error_msg)
 
 # Initialize PayPal client
-paypal_client = PayPalClient()
+try:
+    paypal_client = PayPalClient()
+except Exception as e:
+    app.logger.critical(f"CRITICAL: Failed to initialize PayPal client on startup: {str(e)}")
+    # Create a dummy client to prevent app crash, but log the error
+    paypal_client = None
 
 # Initialize extensions
 db = SQLAlchemy(app)
@@ -112,6 +129,17 @@ def test_paypal_config():
         'paypal_secret': 'SET' if PAYPAL_SECRET else 'NOT SET',
         'paypal_environment': PAYPAL_ENVIRONMENT,
         'config_status': 'OK' if PAYPAL_CLIENT_ID and PAYPAL_SECRET else 'MISSING CREDENTIALS'
+    })
+
+# Health check endpoint for PayPal status
+@app.route('/health/paypal')
+def paypal_health():
+    return jsonify({
+        'paypal_initialized': paypal_client is not None,
+        'paypal_environment': PAYPAL_ENVIRONMENT,
+        'credentials_configured': PAYPAL_CLIENT_ID is not None and PAYPAL_SECRET is not None,
+        'client_id_length': len(PAYPAL_CLIENT_ID) if PAYPAL_CLIENT_ID else 0,
+        'status': 'OK' if paypal_client is not None else 'ERROR'
     })
 
 # Routes
@@ -183,6 +211,11 @@ def payment_page(unique_id):
 @csrf.exempt
 def create_paypal_order():
     try:
+        # Check if PayPal client is initialized
+        if paypal_client is None:
+            app.logger.error("PayPal client is not initialized")
+            return jsonify({'error': 'Payment system not configured properly'}), 500
+        
         if PAYPAL_ENVIRONMENT == 'sandbox':
             print("=== CREATE PAYPAL ORDER REQUEST ===")
         
@@ -270,12 +303,29 @@ def create_paypal_order():
         return jsonify(result)
         
     except Exception as e:
-        if PAYPAL_ENVIRONMENT == 'sandbox':
-            print(f"ERROR in create_paypal_order: {str(e)}")
-            import traceback
-            traceback.print_exc()
+        import traceback
+        error_details = traceback.format_exc()
+        
+        # Log detailed error for debugging (even in live mode temporarily)
         app.logger.error(f'Error creating PayPal order: {str(e)}')
-        return jsonify({'error': 'Failed to create payment order'}), 500
+        app.logger.error(f'Full traceback: {error_details}')
+        
+        # Check if it's a PayPal API error with details
+        error_message = str(e)
+        if hasattr(e, 'message'):
+            error_message = e.message
+        if hasattr(e, 'response'):
+            error_message += f" | Response: {e.response}"
+        
+        if PAYPAL_ENVIRONMENT == 'sandbox':
+            print(f"ERROR in create_paypal_order: {error_message}")
+            traceback.print_exc()
+        
+        # Return more detailed error temporarily for debugging
+        return jsonify({
+            'error': 'Failed to create payment order',
+            'details': error_message if PAYPAL_ENVIRONMENT == 'sandbox' else 'Check server logs for details'
+        }), 500
 
 @app.route('/capture-paypal-order', methods=['POST'])
 @csrf.exempt
